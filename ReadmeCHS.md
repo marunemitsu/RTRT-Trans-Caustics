@@ -58,6 +58,7 @@ RTRT-Trans&Caustics
 
 [Parameters]: ./Demo/Figs/Parameters.png
 
+P.S. 我们提供了一个已经配置好并且带有多个示例场景的[示例工程](./Demo/Demoproject)
 视频结果
 ---
 

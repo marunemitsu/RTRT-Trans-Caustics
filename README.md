@@ -58,6 +58,8 @@ How these parameters affect the results can be found in the supplementary materi
 
 [Parameters]: ./Demo/Figs/Parameters.png
 
+P.S. We provide a [demo project](./Demo/DemoProject) with several sample scenes which have been configured.
+
 Video Results
 ---
 
