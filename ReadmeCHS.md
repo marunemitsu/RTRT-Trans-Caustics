@@ -3,7 +3,7 @@ RTRT-Trans&Caustics
 
 [英文版本](./README.md)|[日语版本](./ReadmeJP.md)(即将上线)
 
-[Teaser]: ./Demo/Figs/GraphicalAbstract.jpg "论文图形摘要"
+![Teaser](./Demo/Figs/GraphicalAbstract.jpg "论文图形摘要")
 
 本工程是使用虚幻引擎4.25.1对于论文`Rendering Transparent Objects with Caustics using Real-Time Ray Tracing`[1]的实现参考。
 论文中模拟了多种透明材质的光学现象，包括反射/折射、体积吸收、粗糙透明以及折射焦散，并将多种透明现象看为一个整体来处理，而不是独立地作为特效实现。
@@ -11,7 +11,7 @@ RTRT-Trans&Caustics
 
 如果想要使用我们的工作，请引用我们的论文[1]。
 
-[论文链接](https://www.sciencedirect.com/science/article/pii/S009784932100039X "论文已经在线发表，但仍未经过编辑部校对并最终定稿。中文版本将在明年在知网可查。")
+[论文链接](https://www.sciencedirect.com/science/article/pii/S009784932100039X "中文版本将在明年在知网可查。")
 
 安装
 ---
@@ -43,22 +43,23 @@ RTRT-Trans&Caustics
 
 将`Post Process Volume`拖入场景中，并将参数`Ray Tracing Translucency`设置为`Ray Tracing`。
 
-[Setting]: ./Demo/Figs/Setup.png
+![Setting](./Demo/Figs/Setup.png)
 
 ### 材质参数
 
 每个透明材质的混合模式必须为`Translucent`，同时着色模式必须为`Default Lit`。
 此外，要想使粗糙度可用，光照模型必须被设置为`Surface Forward Shading`。
 
-[ShadingMode]: ./Demo/Figs/ShadingMode.png
+![ShadingMode](./Demo/Figs/ShadingMode.png)
 
 我们引入了三个材质参数来控制渲染结果，包括`absorption coefficient`（吸收因子）、`roughness`（粗糙度）以及`opacity`（不透明度）。
 此外，参数`refraction`（折射）控制透明材质的折射率。
 这些参数如何影响渲染结果会在论文的补充材料中找到。
 
-[Parameters]: ./Demo/Figs/Parameters.png
+![Parameters](./Demo/Figs/Parameters.png)
 
 P.S. 我们提供了一个已经配置好并且带有多个示例场景的[示例工程](./Demo/Demoproject)
+
 视频结果
 ---
 

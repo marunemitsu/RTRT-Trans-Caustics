@@ -3,7 +3,7 @@ RTRT-Trans&Caustics
 
 [Chinese Version](./ReadmeCHS.md) | [Japanese Version](./ReadmeJP.md)(Comming soon)
 
-[Teaser]: ./Demo/Figs/GraphicalAbstract.jpg "Graphical Abstract of our paper"
+![Teaser](./Demo/Figs/GraphicalAbstract.jpg "Graphical Abstract")
 
 This is a reference implementation of `Rendering Transparent Objects with Caustics using Real-Time Ray Tracing` [1] using Unreal Engine 4.25.1.
 It approximates several transparency features, including reflections/refractions, volumetric absorption, rough transparency, and refractive caustics.
@@ -43,20 +43,20 @@ Usage
 
 Drag a `Post Process Volume` actor to the scene and change the value `Ray Tracing Translucency` to `Ray Tracing`.
 
-[Setting]: ./Demo/Figs/Setup.png
+![Setting](./Demo/Figs/Setup.png)
 
 ### Material Parameters
 
 The blending mode each transparent material must be `Translucent` and the shading model must be `Default Lit`.
 Furthermore, to enable the roughness, the lighting model must be `Surface Forward Shading`.
 
-[ShadingMode]: ./Demo/Figs/ShadingMode.png
+![ShadingMode](./Demo/Figs/ShadingMode.png)
 
 We introduce three material parameters into our work, which are the `absorption coefficient`, `roughness` and the `opacity`.
 Additionally, the parameter `refraction` controls the IOR of the material.
 How these parameters affect the results can be found in the supplementary material to the paper.
 
-[Parameters]: ./Demo/Figs/Parameters.png
+![Parameters](./Demo/Figs/Parameters.png)
 
 P.S. We provide a [demo project](./Demo/DemoProject) with several sample scenes which have been configured.
 
