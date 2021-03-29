@@ -5,10 +5,10 @@ RTRT-Trans&Caustics
 
 ![Teaser](./Demo/Figs/Teaser.png)
 
-This is a reference implementation of `Rendering transparent objects with caustics using real-time ray tracing`<sub>[1]</sub> using Unreal Engine 4.25.1.
+This is a reference implementation of `Rendering transparent objects with caustics using real-time ray tracing`<sup>[1]</sup> using Unreal Engine 4.25.1.
 It approximates several transparency features, including reflections/refractions, volumetric absorption, rough transparency, and refractive caustics.
 The results are relatively noise free and a step up over the prior raster hacks in that the model plays together into a cohesive whole, rather than being individual effects.
-Should you be making use of our work, please cite our paper<sub>[1]</sub>.
+Should you be making use of our work, please cite our paper<sup>[1]</sup>.
 
 [Paper](https://www.sciencedirect.com/science/article/pii/S009784932100039X "The paper is now in press.")
 
@@ -74,16 +74,16 @@ Should you be interested in using our technology for any commercial use, please 
 TODO
 ---
 * Move to a new shading mode and update the parameters of the root node of the material.
-* Extend LLT to handle stacked transparent objects, like Barré-Brisebois et al.'s work<sub>[2]</sub>.
+* Extend LLT to handle stacked transparent objects, like Barré-Brisebois et al.'s work<sup>[2]</sup>.
 * Design a denoiser that can supress the noise in rough transparncy, reflections, and refractive caustics.
-* Chage the order of the passes in LHPC and make the caustics can be seen through the transparent object, similar to Ouyang and Yang's work<sub>[3]</sub>.
+* Chage the order of the passes in LHPC and make the caustics can be seen through the transparent object, similar to Ouyang and Yang's work<sup>[3]</sup>.
 
 Acknowledgment
 ---
 
 This work was supported by the National Natural Science Foundation of China [51627805].
 The authors would like to thank the anonymous reviewers for both their helpful comments and suggestions.
-The authors also would like to thank Hyuk Kim for his help in implementing the SSPM<sub>[4]</sub>$.
+The authors also would like to thank Hyuk Kim for his help in implementing the SSPM<sup>[4]</sup>$.
 The authors wish to thank the starter content of UE4 for the materials and the project _ArchViz_ Interior for the model of the apple and polyhedron.
 Other scene elements were purchased from <https://aigei.com>.
 
