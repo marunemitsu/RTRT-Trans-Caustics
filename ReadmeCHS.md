@@ -3,7 +3,7 @@ RTRT-Trans&Caustics
 
 [英文版本](./README.md)|[日语版本](./ReadmeJP.md)(即将上线)
 
-![Teaser](./Demo/Figs/GraphicalAbstract.jpg "论文图形摘要")
+![Teaser](./Demo/Figs/Teaser.png)
 
 本工程是使用虚幻引擎4.25.1对于论文`Rendering Transparent Objects with Caustics using Real-Time Ray Tracing`[1]的实现参考。
 论文中模拟了多种透明材质的光学现象，包括反射/折射、体积吸收、粗糙透明以及折射焦散，并将多种透明现象看为一个整体来处理，而不是独立地作为特效实现。
