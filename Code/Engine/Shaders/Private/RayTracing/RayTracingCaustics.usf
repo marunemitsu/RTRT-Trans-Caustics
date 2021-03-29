@@ -1,0 +1,439 @@
+// Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
+
+#ifndef DIM_DENOISER_OUTPUT
+#define DIM_DENOISER_OUTPUT 0
+#endif
+
+#include "../Common.ush"
+
+#define SUPPORT_CONTACT_SHADOWS 0
+#define USE_SOURCE_TEXTURE 1
+#define USE_SOURCE_TEXTURE_ARRAY 1
+
+#define LTCMatTexture RaytracingLightsDataPacked.LTCMatTexture
+#define LTCMatSampler RaytracingLightsDataPacked.LTCMatSampler
+#define LTCAmpTexture RaytracingLightsDataPacked.LTCAmpTexture
+#define LTCAmpSampler RaytracingLightsDataPacked.LTCAmpSampler
+#define PreIntegratedGF ReflectionStruct.PreIntegratedGF
+#define PreIntegratedGFSampler ReflectionStruct.PreIntegratedGFSampler
+
+#include "../DeferredShadingCommon.ush"
+#include "../DeferredLightingCommon.ush"
+#include "../ReflectionEnvironmentShared.ush"
+#include "../Montecarlo.ush"
+#include "../PathTracing/Utilities/PathTracingRandomSequence.ush"
+#include "../HeightFogCommon.ush"
+#include "../SobolRandom.ush"
+#include "../SceneTextureParameters.ush"
+#include "RayTracingCommon.ush"
+#include "RayTracingDeferredShadingCommon.ush"
+#include "RayTracingHitGroupCommon.ush"
+#include "RayTracingDirectionalLight.ush"
+#include "RayTracingRectLight.ush"
+#include "RayTracingSphereLight.ush"
+#include "RayTracingSpotLight.ush"
+#include "RayTracingPointLight.ush"
+
+
+#include "RayTracingLightingCommon.ush"
+
+#define ERayTracingPrimaryRaysFlag_None 0
+#define ERayTracingPrimaryRaysFlag_UseGBufferForMaxDistance (1u << 0)
+#define ERayTracingPrimaryRaysFlag_ConsiderSurfaceScatter (1u << 1)
+#define ERayTracingPrimaryRaysFlag_AllowSkipSkySample (1u << 2)
+
+int SamplesPerPixel;
+int MaxRefractionRays;
+int HeightFog;
+int ReflectedShadowsType;
+int ShouldDoDirectLighting;
+int ShouldDoEmissiveAndIndirectLighting;
+int UpscaleFactor;
+int ShouldUsePreExposure;
+uint PrimaryRayFlags;
+
+float TransmissionMinRayDistance;
+float TransmissionMaxRayDistance;
+float TransmissionMaxRoughness;
+int TranmissionRefraction;
+float MaxNormalBias;
+
+Texture2D SceneColorTexture;
+
+StructuredBuffer<FRTLightingData> LightDataBuffer;
+RaytracingAccelerationStructure TLAS;
+
+RWTexture2D<float4> ColorOutput;
+RWTexture2D<float> RayHitDistanceOutput;
+RWTexture2D<float> RayImaginaryDepthOutput;
+
+#include "RayTracingLightsForCaustics.ush"
+#include "Utils.ush"
+
+void DEBUG_Show3DPosition(float3 Position, float3 Color)
+{
+	uint2 ThreadID = GenerateThreadId(Position, UpscaleFactor);
+	uint2 TransPixelCoord = GetPixelCoord(ThreadID, UpscaleFactor);
+	ColorOutput[ThreadID] += float4(Color, 0.0f);
+}
+
+// check the P_f is visible from the current camera
+bool CheckDepthAvalible(float2 UV, float3 WorldPosition, float ImaginaryDepth)
+{  
+    RayDesc Ray = CreatePrimaryRay(UV);
+    FRayCone RayCone = (FRayCone)0;
+	RayCone.SpreadAngle = View.EyeToPixelSpreadAngle;
+    FMaterialClosestHitPayload Payload = TraceMaterialRay(
+		TLAS,
+		0,
+		RAY_TRACING_MASK_ALL,
+		Ray,
+		RayCone,
+        false);
+    float3 HitPosition = Ray.Origin + Ray.Direction * Payload.HitT;
+    if(length(WorldPosition - HitPosition) <= 1.5f)
+    {
+        ImaginaryDepth = Payload.HitT;
+        return true;
+    }
+    return false;
+}
+
+void UpdateHitDistanceOutput(float HitDistance, uint2 ThreadID)
+{
+    float MaxDistance = 1000.0f;
+    float MinDistance = 200.0f;
+    if (HitDistance > 0.0f)
+    {
+        RayHitDistanceOutput[ThreadID] = clamp(HitDistance, MinDistance, MaxDistance);
+    }
+}
+
+void UpdateImaginaryDepthOutput(float ImaginaryDepth, uint2 ThreadID)
+{
+    float MinDepth = 50.0f;
+    float MaxDepth = 1000.0f;
+    if (ImaginaryDepth > 0.0f)
+    {
+        RayImaginaryDepthOutput[ThreadID] = clamp(ImaginaryDepth, MinDepth, MaxDepth);
+    }
+}
+
+RAY_TRACING_ENTRY_RAYGEN(RayTracingCausticsRGS)
+{
+    uint2 DispatchThreadId = DispatchRaysIndex().xy + View.ViewRectMin;
+    uint2 PixelCoord = GetPixelCoord(DispatchThreadId, UpscaleFactor);
+    uint LinearIndex = PixelCoord.y * View.BufferSizeAndInvSize.x + PixelCoord.x;
+
+    RandomSequence RandSequence;
+    RandomSequence_Initialize(RandSequence, LinearIndex, View.StateFrameIndex);
+
+    float2 InvBufferSize = View.BufferSizeAndInvSize.zw;
+    float2 UV = (float2(PixelCoord) + 0.5) * InvBufferSize;
+    FGBufferData GBufferData = GetGBufferDataFromSceneTextures(UV);
+    float Depth = GBufferData.Depth;
+    float3 WorldPosition = ReconstructWorldPositionFromDepth(UV, Depth);
+    float WorldSpaceDistance = length(WorldPosition - View.WorldCameraOrigin);
+    float2 TanViewFOV = GetTanHalfFieldOfView();
+    float3 WorldNormal = GBufferData.WorldNormal;
+    float MaxLum = 1;
+    bool bAllowSkySampling;
+    float SurfaceCurvature = 0.0f;
+    if ((ERayTracingPrimaryRaysFlag_AllowSkipSkySample & PrimaryRayFlags) != 0)
+    {
+        // Sky is only sampled when infinite reflection rays are used.
+        bAllowSkySampling = TransmissionMaxRayDistance < 0;
+    }
+    else
+    {
+        bAllowSkySampling = true;
+    }
+    const float LocalMaxRayDistance = bAllowSkySampling ? 1e27f : lerp(TransmissionMaxRayDistance, TransmissionMinRayDistance, GBufferData.Roughness);
+
+    bool bNeedTransmission = false;
+    float3 TransmissionPosition = float3(0.0f, 0.0f, 0.0f);
+
+    RayDesc Ray = CreatePrimaryRay(UV);
+    FRayCone RayCone = (FRayCone)0;
+    RayCone.SpreadAngle = View.EyeToPixelSpreadAngle;
+
+    uint LightSize, Stride;
+    LightDataBuffer.GetDimensions(LightSize, Stride);
+
+    if (MaxRefractionRays <= 2)
+    {
+        return;
+    }
+
+    uint RayFlags = 0;
+    RayFlags |= RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
+    uint MissShaderIndex = 0;
+
+    // Transmission results are only enabled on the front faces of OPAQUE objects now
+    FMaterialClosestHitPayload Payload = TraceMaterialRay(
+        TLAS,
+        RayFlags,
+        RAY_TRACING_MASK_ALL,
+        Ray,
+        RayCone,
+        true);
+
+    float3 OcclusionPosition = Ray.Origin + Ray.Direction * Payload.HitT;
+    if (Payload.IsHit())
+    {
+        for (uint LightIndex = 0; LightIndex < LightSize; ++LightIndex)
+        {
+            if(LightDataBuffer[LightIndex].Type > 3)
+                continue;
+
+            float PathThroughput = 1.0f;
+            float3 IncidentRadiance = float3(0,0,0);
+            RayDesc OcclusionRay;
+            uint DummyVariable;
+            float2 RandSample = RandomSequence_GenerateSample2D(RandSequence, DummyVariable);
+
+            bNeedTransmission = GenerateOcclusionRayWithLightingData(
+                LightDataBuffer[LightIndex],
+                OcclusionPosition,
+                Payload.WorldNormal,
+                RandSample,
+                /* out */ OcclusionRay.Origin,
+                /* out */ OcclusionRay.Direction,
+                /* out */ OcclusionRay.TMin,
+                /* out */ OcclusionRay.TMax);
+            
+            if (bNeedTransmission)
+            {
+                RayCone = PropagateRayCone(RayCone, SurfaceCurvature, Depth);
+
+                FMaterialClosestHitPayload OcclusionPayload = TraceMaterialRay(
+                    TLAS,
+                    RayFlags,
+                    RAY_TRACING_MASK_OPAQUE,
+                    OcclusionRay,
+                    RayCone,
+                    true);
+
+                // There's no translucent object enable
+                if (OcclusionPayload.IsHit() && OcclusionPayload.BlendingMode == RAY_TRACING_BLEND_MODE_OPAQUE)
+                {
+                    continue;
+                }
+
+                float OcclusionHitT = OcclusionPayload.HitT;
+                // Trace the second Occlusion Ray
+                
+
+                OcclusionPayload = TraceMaterialRay(
+                    TLAS,
+                    RayFlags,
+                    RAY_TRACING_MASK_TRANSLUCENT,
+                    OcclusionRay,
+                    RayCone,
+                    true);
+
+                if (OcclusionPayload.IsMiss())
+                {
+                    continue;
+                }
+
+                float3 DielectricColor = OcclusionPayload.BaseColor;
+                float DielectircOpacity = OcclusionPayload.Opacity;
+
+                RayFlags = 0;
+                RayDesc ProbeRay;
+                ProbeRay.Origin = OcclusionRay.Origin + OcclusionRay.Direction * OcclusionPayload.HitT;
+                ProbeRay.Direction = OcclusionRay.Direction;
+                ProbeRay.TMax = LocalMaxRayDistance;
+                ProbeRay.TMin = 0.1f;
+
+                FMaterialClosestHitPayload ProbePayload = TraceMaterialRay(
+                    TLAS,
+                    RayFlags,
+                    RAY_TRACING_MASK_TRANSLUCENT,
+                    ProbeRay,
+                    RayCone,
+                    true);
+                
+                if (ProbePayload.IsFrontFace())
+                {
+                    continue;
+                }
+                {
+                    RayDesc IncidentRay;
+                    IncidentRay.Origin = ProbeRay.Origin + ProbeRay.Direction * (ProbePayload.HitT + 50.0);
+                    IncidentRay.Direction = -ProbeRay.Direction;
+                    IncidentRay.TMax = LocalMaxRayDistance;
+                    IncidentRay.TMin = 0.1f;
+
+                    const uint ReflectionRayFlags = RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
+			        const uint ReflectionInstanceInclusionMask = RAY_TRACING_MASK_ALL;
+			        const bool bReflectionRayTraceSkyLightContribution = false;
+			        const bool bReflectionDecoupleSampleGeneration = true;
+			        const bool bReflectionEnableSkyLightContribution = ShouldSkyLightAffectReflection();
+
+			        FMaterialClosestHitPayload IncidentPayload = TraceRayAndAccumulateResults(
+				        IncidentRay,
+				        TLAS,
+				        ReflectionRayFlags,
+				        ReflectionInstanceInclusionMask,
+				        RandSequence,
+				        PixelCoord,
+				        MaxNormalBias,
+				        ReflectedShadowsType,
+				        ShouldDoDirectLighting,
+				        ShouldDoEmissiveAndIndirectLighting,
+				        bReflectionRayTraceSkyLightContribution,
+				        bReflectionDecoupleSampleGeneration,
+				        RayCone,
+				        bReflectionEnableSkyLightContribution,
+				        IncidentRadiance);
+                    
+                    IncidentRadiance *= (1 - IncidentPayload.Opacity);
+                }
+
+                // Trace the light half path
+                RayDesc AbsorptionRay;
+                AbsorptionRay.Origin = ProbeRay.Origin + ProbeRay.Direction * ProbePayload.HitT;
+                AbsorptionRay.TMax = OcclusionRay.TMax;
+                AbsorptionRay.TMin = 0.01f;
+                if (ProbePayload.Roughness > 0)
+                {
+                    BiasNormal(RandSequence, DispatchThreadId, ProbePayload.WorldNormal, ProbePayload.Roughness);
+                }
+                AbsorptionRay.Direction = RefractRay(
+                    -ProbeRay.Direction,
+                    ProbePayload.WorldNormal,
+                    DielectricF0ToIor(DielectricSpecularToF0(ProbePayload.Specular)),
+                    true,
+                    PathThroughput);
+
+                RayCone = PropagateRayCone(RayCone, SurfaceCurvature, Depth);
+                
+                FMaterialClosestHitPayload AbsorptionPayload = TraceMaterialRay(
+                    TLAS,
+                    RayFlags,
+                    RAY_TRACING_MASK_ALL,
+                    AbsorptionRay,
+                    RayCone,
+                    true);
+                
+                IncidentRadiance -= 12 * RayAbsorb(AbsorptionPayload.DiffuseColor, AbsorptionPayload.HitT, AbsorptionPayload。Ior);
+                bool IsInside = (AbsorptionPayload.IsFrontFace() && AbsorptionPayload.BlendingMode == RAY_TRACING_BLEND_MODE_OPAQUE);
+                RayDesc TransmissionRay;
+                if (IsInside)
+                {
+                    continue;
+                }
+                else
+                {
+                    TransmissionRay.Origin = AbsorptionRay.Origin + AbsorptionRay.Direction * AbsorptionPayload.HitT;
+                    TransmissionRay.TMax = AbsorptionRay.TMax - AbsorptionPayload.HitT;
+                    TransmissionRay.TMin = 0.01f;
+                    IncidentRadiance *= (1 - AbsorptionPayload.Opacity);
+                    
+                }
+
+                // Distribution method
+                if (SamplesPerPixel <= 1 || AbsorptionPayload.Roughness == 0)
+                {
+                    FMaterialClosestHitPayload TransmissionPayload;
+                    if(!IsInside)
+                    {
+                        
+                        if (AbsorptionPayload.Roughness > 0)
+                        {
+                            BiasNormal(RandSequence, DispatchThreadId, AbsorptionPayload.WorldNormal, AbsorptionPayload.Roughness);
+                        }
+
+                        TransmissionRay.Direction = RefractRay(
+                            AbsorptionRay.Direction,
+                            AbsorptionPayload.WorldNormal,
+                            DielectricF0ToIor(DielectricSpecularToF0(AbsorptionPayload.Specular)),
+                            false,
+                            PathThroughput);
+                        RayCone = PropagateRayCone(RayCone, SurfaceCurvature, Depth);
+                        RayFlags |= RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
+                        TransmissionPayload = TraceMaterialRay(
+                            TLAS, // AccelerationStructure
+                            RayFlags,
+                            RAY_TRACING_MASK_ALL,
+                            TransmissionRay, // RayDesc
+                            RayCone,
+                            true);
+                    }
+
+                    if (!TransmissionPayload.IsMiss() && TransmissionPayload.IsFrontFace())
+                    {
+                        float3 HitPosition = TransmissionRay.Origin + TransmissionRay.Direction * TransmissionPayload.HitT;
+                        uint2 ThreadID = GenerateThreadId(HitPosition, UpscaleFactor);
+                        uint2 TransPixelCoord = GetPixelCoord(ThreadID, UpscaleFactor);
+                        float2 TransUV = (float2(TransPixelCoord) + 0.5) * InvBufferSize;
+                        float ImaginaryDepth = 0.0f;
+                        if(CheckDepthAvalible(TransUV, HitPosition, ImaginaryDepth))
+                        {
+                            if(TransmissionPayload.BlendingMode == RAY_TRACING_BLEND_MODE_TRANSLUCENT)
+                            {
+                                IncidentRadiance *= TransmissionPayload.Opacity;
+                            }
+                            UpdateHitDistanceOutput(ThreadID, TransmissionPayload.HitT);
+                            UpdateImaginaryDepthOutput(ThreadID, ImaginaryDepth);
+                            ColorOutput[ThreadID] += ClampToHalfFloatRange(float4(IncidentRadiance, AbsorptionPayload.Opacity));
+                            
+                        }
+                    }
+                }
+                else
+                {
+                    FRayCone SampleRayCone = PropagateRayCone(RayCone, SurfaceCurvature, Depth);
+                    for (uint SampleIndex = 0; SampleIndex < SamplesPerPixel; ++SampleIndex)
+                    {
+                        float3 SampleRadiance = IncidentRadiance;
+                        float4 weight = 0.0f;
+                        if (AbsorptionPayload.Roughness > 0)
+                        {
+                            weight = BiasNormal(RandSequence, DispatchThreadId, AbsorptionPayload.WorldNormal, AbsorptionPayload.Roughness);
+                        }
+                        float Ior = DielectricF0ToIor(DielectricSpecularToF0(AbsorptionPayload.Specular));
+                        TransmissionRay.Direction = RefractRay(
+                            AbsorptionRay.Direction,
+                            AbsorptionPayload.WorldNormal,
+                            Ior,
+                            false,
+                            PathThroughput);
+                        
+                        weight = min(clamp(weight, 0, 1),dot(AbsorptionPayload.WorldNormal,TransmissionRay.Direction));
+                        RayFlags |= RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
+                        FMaterialClosestHitPayload TransmissionPayload = TraceMaterialRay(
+                            TLAS, // AccelerationStructure
+                            RayFlags,
+                            RAY_TRACING_MASK_ALL,
+                            TransmissionRay, // RayDesc
+                            SampleRayCone,
+                            true);
+                        
+                        if (!TransmissionPayload.IsMiss() && TransmissionPayload.IsFrontFace())
+                        {
+                            float3 HitPosition = TransmissionRay.Origin + TransmissionRay.Direction * TransmissionPayload.HitT;
+                            uint2 ThreadID = GenerateThreadId(HitPosition, UpscaleFactor);
+                            uint2 TransPixelCoord = GetPixelCoord(ThreadID, UpscaleFactor);
+                            float2 TransUV = (float2(TransPixelCoord) + 0.5) * InvBufferSize;
+                            float ImaginaryDepth = 0.0f;
+                            if(CheckDepthAvalible(TransUV, HitPosition, ImaginaryDepth))
+                            {
+                                if(TransmissionPayload.BlendingMode == RAY_TRACING_BLEND_MODE_TRANSLUCENT)
+                                {
+                                    SampleRadiance *= TransmissionPayload.Opacity;
+                                }
+                                UpdateHitDistanceOutput(ThreadID, TransmissionPayload.HitT);
+                                UpdateImaginaryDepthOutput(ThreadID, ImaginaryDepth);
+                                ColorOutput[ThreadID] += ClampToHalfFloatRange(float4(SampleRadiance, AbsorptionPayload.Opacity) * weight) * rcp(SamplesPerPixel);
+                            }
+                            
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

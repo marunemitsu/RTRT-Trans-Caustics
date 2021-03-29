@@ -1,0 +1,119 @@
+#pragma once
+
+#include "../Common.ush"
+#include"../BRDF.ush"
+#include "../SobolRandom.ush"
+#include "../Montecarlo.ush"
+#include "../PathTracing/Utilities/PathTracingRandomSequence.ush" 
+#include "RayTracingCommon.ush"
+#include "RayTracingHitGroupCommon.ush"
+#include "../LightShaderParameters.ush"
+
+
+// Transforming the world position of $P_{f}$ to pixel coordiante of the current view $C$.
+float2 WorldToPixelCoordinate(float3 WorldPosition)
+{
+    float4 PixelCoordinate = mul(float4(WorldPosition, 1.0f), View.WorldToClip);
+    return PixelCoordinate.xy / PixelCoordinate.w;
+}
+
+// Generate ThreadId with PiexelCoord for Transmission
+uint2 GenerateThreadId(float3 Position, uint UpscaleFactor)
+{
+    float4 ClipPosition = mul(float4(Position, 1.0), View.WorldToClip);
+    if(ClipPosition.w > 0)
+    {
+        float2 ScreenPosition = ClipPosition.xy / ClipPosition.w;
+        float2 UV = ScreenPosition * View.ScreenPositionScaleBias.xy + View.ScreenPositionScaleBias.wz;
+        float2 PixelCoord = UV / View.BufferSizeAndInvSize.zw -0.5f;
+        uint UpscaleFactorPow2 = UpscaleFactor * UpscaleFactor;
+	    uint SubPixelId = View.StateFrameIndex & (UpscaleFactorPow2 - 1);
+	    return (PixelCoord - uint2(SubPixelId & (UpscaleFactor - 1), SubPixelId / UpscaleFactor)) / UpscaleFactor;
+    }
+	return uint2(0,0);
+	//return DispatchThreadId * UpscaleFactor + uint2(SubPixelId & (UpscaleFactor - 1), SubPixelId / UpscaleFactor);
+}
+
+
+/*********************************************/
+
+// \delta(Diffcolor) = 1 - DiffColor
+float3 ColorInvert(float3 color)
+{
+    return float3(1.0f, 1.0f, 1.0f) - color;
+}
+// Calculating the Volumetric Absorption
+float3 RayAbsorb(float3 AbsorbColor, float HitT, float Opacity)
+{
+    float3 DeltaColor = ColorInvert(AbsorbColor);
+    float3 AbsorbRadiance = (1.0 - exp(-Opacity * HitT * 0.00075)) * DeltaColor;
+    return AbsorbRadiance;
+}
+
+
+/*****************************************/
+// Rough Transparency
+// Generating the Bent Normal $N_b$
+float BiasNormal(RandomSequence RandSequence,uint2 DispatchThreadId, inout float3 MicroNormal, float Roughness)
+{
+    float3 SmoothNormal = MicroNormal;
+    uint DummyVariable;
+    float2 E = RandomSequence_GenerateSample2D(RandSequence, DummyVariable);
+    float a = Roughness * Roughness;
+    float4 Direction_Tangent = ImportanceSampleGGX(E, a * a);
+    MicroNormal = TangentToWorld(Direction_Tangent.xyz, MicroNormal);
+    
+    if (dot(SmoothNormal, MicroNormal) < 0.0)
+    {
+        MicroNormal = MicroNormal - 2.0f * dot(SmoothNormal, MicroNormal) * SmoothNormal;
+    }
+    return ImportanceSampleGGX(E, a * a).w;
+}
+
+float FresnelDielectric(float Eta, float IoH, float ToH)
+{
+	float Rs = Square((Eta * IoH - ToH) / (Eta * IoH + ToH));
+	float Rp = Square((Eta * ToH - IoH) / (Eta * ToH + IoH));
+	return (Rs + Rp) / 2;
+}
+
+float CalcNoT(float CosTheta1, float N1, float N2)
+{
+	float SinTheta1_Squared = 1.0 - CosTheta1 * CosTheta1;
+	float SinTheta2_Squared = (SinTheta1_Squared * N1 * N1) / (N2 * N2);
+	float CosTheta2_Squared = 1.0 - SinTheta2_Squared;
+	return CosTheta2_Squared > 0.0 ? sqrt(CosTheta2_Squared) : 0.0;
+}
+
+float3 RefractRay(float3 RayDirection, float3 N, float Ior, bool bIsEntering, inout float PathThroughput)
+{
+    float3 V = -RayDirection;
+    float3 RefractedDirection = float3(0, 0, 0);
+    float NoV = dot(N, V);
+
+    if(NoV < 0.0f)
+    {
+        NoV = -NoV;
+		N = -N;
+		bIsEntering = true;
+    }
+
+    float N1 = bIsEntering ? 1.0 : Ior;
+	float N2 = bIsEntering ? Ior : 1.0;
+	float Eta = N1 / N2;
+	float NoT = CalcNoT(NoV, N1, N2);
+    float Fr = FresnelDielectric(Eta, NoV, NoT);
+    float3 T = refract(RayDirection, N, Eta);
+	if (any(T) > 0.0)
+	{
+		RefractedDirection = T;
+		PathThroughput *= 1.0 - Fr;
+	}
+	// Handle total internal reflection
+	else
+	{
+		RefractedDirection = reflect(-V, N);
+	}
+
+    return RefractedDirection;
+}

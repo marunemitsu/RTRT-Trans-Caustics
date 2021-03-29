@@ -1,0 +1,343 @@
+
+#include "../LightShaderParameters.ush"
+#include "../PathTracing/Utilities/PathTracingRandomSequence.ush"
+#include "../RectLight.ush"
+#include "RayTracingLightingCommon.ush"
+#include "RayTracingHitGroupCommon.ush"
+
+/////////////////////////////////////////////////////////////////////////////////
+// Founctions with LightingData instead founctions in LightShaderParameters.ush
+/////////////////////////////////////////////////////////////////////////////////
+
+float2 GetRectLightDimensionsWithLightingData(FRTLightingData LightParameters)
+{
+	return 2.0 * float2(LightParameters.SourceRadius, LightParameters.SourceLength);
+}
+
+void GetRectLightTangentsWithLightingData(FRTLightingData LightParameters, out float3 Tangent, out float3 BiTangent)
+{
+	Tangent = cross(LightParameters.Tangent, LightParameters.Direction);
+	BiTangent = LightParameters.Tangent;
+}
+
+
+// SphereLight with LightingData
+bool GenerateSphereLightOcclusionRayWithLightingData(
+	FRTLightingData LightParameters,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float2 RandSample,
+	out float3 RayOrigin,
+	out float3 RayDirection,
+	out float RayTMin,
+	out float RayTMax,
+	out float RayPdf
+)
+{
+	float4 Result = UniformSampleSphere(RandSample);
+	float3 LightNormal = Result.xyz;
+	float3 LightPosition = LightParameters.LightPosition + LightNormal * LightParameters.SourceRadius;
+	float3 LightDirection = LightPosition - WorldPosition;
+	float RayLength = length(LightDirection);
+	LightDirection /= RayLength;
+
+	RayOrigin = WorldPosition;
+	RayDirection = LightDirection;
+	RayTMin = 0.0;
+	RayTMax = RayLength;
+
+	float SolidAnglePdf = Result.w * saturate(dot(LightNormal, -LightDirection)) / (RayLength * RayLength);
+	RayPdf = SolidAnglePdf;
+	return true;
+}
+
+
+// DiskLight with LightingData
+bool GenerateDiskLightOcclusionRayWithLightingData(
+	FRTLightingData LightParameters,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float2 RandSample,
+	out float3 RayOrigin,
+	out float3 RayDirection,
+	out float RayTMin,
+	out float RayTMax
+)
+{
+	RayOrigin = WorldPosition;
+	RayDirection = 0.0;
+	RayTMin = 0.01;
+	RayTMax = RayTMin;
+
+	// Sample disk of SourceRadius
+	float2 UV = UniformSampleDiskConcentric(RandSample);
+	float3 P_Local = float3(UV, 0.0) * LightParameters.SourceRadius;
+	float3 BiTangent = cross(LightParameters.Direction, LightParameters.Tangent);
+	float3 P_World = LightParameters.LightPosition + P_Local.x * LightParameters.Tangent + P_Local.y * BiTangent;
+
+	// Construct light direction according to sample
+	float3 LightDirection = P_World - WorldPosition;
+	float RayLength = length(LightDirection);
+	LightDirection *= rcp(RayLength);
+
+	// Apply normal culling
+	float NoL = dot(LightDirection, LightParameters.Direction);
+	bool IsVisible = NoL > 0.0;
+	if (IsVisible)
+	{
+		RayDirection = LightDirection;
+		RayTMax = RayLength;
+	}
+	return IsVisible;
+}
+
+
+// PointLight with LightingData
+bool GeneratePointLightOcclusionRayWithLightingData(
+	FRTLightingData LightParameters,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float2 RandSample,
+	out float3 RayOrigin,
+	out float3 RayDirection,
+	out float RayTMin,
+	out float RayTMax
+)
+{
+	float3 LightDirection = LightParameters.LightPosition - WorldPosition;
+	float RayLength = length(LightDirection);
+	LightDirection /= RayLength;
+
+	// Apply normal perturbation when defining ray
+	RayOrigin = WorldPosition;
+	RayDirection = LightDirection;
+	RayTMin = 0.0;
+	RayTMax = RayLength;
+	return true;
+}
+
+
+// RectLight with LighingData
+bool GenerateRectLightOcclusionRayWithLightingData(
+	FRTLightingData LightParameters,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float2 RandSample,
+	out float3 RayOrigin,
+	out float3 RayDirection,
+	out float RayTMin,
+	out float RayTMax,
+	out float RayPdf
+)
+{
+	RayOrigin = WorldPosition;
+	RayDirection = 0;
+	RayTMin = 0.0;
+	RayTMax = 0.0;
+	RayPdf = 0.0;
+
+	float3 Tangent;
+	float3 BiTangent;
+	GetRectLightTangentsWithLightingData(LightParameters, /* out */ Tangent, /* out */ BiTangent);
+	float2 LightDimensions = GetRectLightDimensionsWithLightingData(LightParameters);
+	
+	// Draw random variable
+	RandSample -= 0.5;
+
+	// Map sample point to quad
+	float3 LightSamplePosition = LightParameters.LightPosition + Tangent * LightDimensions.x * RandSample.x + BiTangent * LightDimensions.y * RandSample.y;
+	float3 LightDirection = normalize(LightSamplePosition - WorldPosition);
+
+	// Light-normal culling
+	if (dot(-LightDirection, -LightParameters.Direction) <= 0.0)
+	{
+		return false;
+	}
+
+	// Apply normal perturbation when defining ray
+	RayDirection = LightDirection;
+	RayTMax = length(LightSamplePosition - WorldPosition);
+
+	// Define rectangle
+	FRect Rect;
+	Rect.Origin = LightParameters.LightPosition - WorldPosition;
+	Rect.Axis[0] = Tangent;
+	Rect.Axis[1] = BiTangent;
+	Rect.Axis[2] = cross(Tangent, BiTangent);
+	Rect.Extent = LightDimensions * 0.5f;
+	FSphericalRect SphericalRect = BuildSphericalRect(Rect);
+	RayPdf = 1.0 / SphericalRect.SolidAngle;
+
+	return true;
+}
+
+
+// DirectionalLight with LightingData
+void GenerateDirectionalLightOcclusionRayWithLightingData(
+	FRTLightingData LightParameters,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float2 RandSample,
+	out float3 RayOrigin,
+	out float3 RayDirection,
+	out float RayTMin,
+	out float RayTMax)
+{
+	// Draw random variable and choose a point on a unit disk
+	float2 BufferSize = View.BufferSizeAndInvSize.xy;
+
+	float2 DiskUV = UniformSampleDiskConcentric(RandSample) * LightParameters.SourceRadius;
+
+	// Permute light direction by user-defined radius on unit sphere
+	float3 LightDirection = LightParameters.Direction;
+	float3 N = LightDirection;
+	float3 dPdu = float3(1, 0, 0);
+	if (dot(N, dPdu) != 0)
+	{
+		dPdu = cross(N, dPdu);
+	}
+	else
+	{
+		dPdu = cross(N, float3(0, 1, 0));
+	}
+	float3 dPdv = cross(dPdu, N);
+	LightDirection += dPdu * DiskUV.x + dPdv * DiskUV.y;
+	
+    RayOrigin = WorldPosition;
+    RayDirection = normalize(LightDirection);
+	RayTMin = 0.0;
+	RayTMax = 1.0e27;
+}
+
+
+// SpotLight with LightingData
+bool GenerateSpotLightOcclusionRayWithLightingData(
+	FRTLightingData LightParameters,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float2 RandSample,
+	out float3 RayOrigin,
+	out float3 RayDirection,
+	out float RayTMin,
+	out float RayTMax
+)
+{
+	bool IsVisible = true;
+	float3 LightDirection = LightParameters.LightPosition - WorldPosition;
+	float RayLength = length(LightDirection);
+	LightDirection *= rcp(RayLength);
+
+	if (LightParameters.SourceRadius > 0.0)
+	{
+		IsVisible = GenerateDiskLightOcclusionRayWithLightingData(LightParameters, WorldPosition, WorldNormal, RandSample,
+			RayOrigin, RayDirection, RayTMin, RayTMax);
+	}
+	else
+	{
+		RayOrigin = WorldPosition;
+		RayDirection = LightDirection;
+		RayTMin = 0.01;
+		RayTMax = RayLength;
+	}
+
+	// Apply culling
+	if (IsVisible)
+	{
+		float CosAngle = LightParameters.SpotAngles.x;
+		IsVisible = dot(LightDirection, LightParameters.Direction) >= CosAngle;
+	}
+	return IsVisible;
+}
+
+
+// For Transmission
+bool GenerateOcclusionRayWithLightingData(
+	FRTLightingData LightingData,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float2 RandSample,
+	out float3 RayOrigin,
+	out float3 RayDirection,
+	out float RayTMin,
+	out float RayTMax
+)
+{
+    switch(LightingData.Type)
+    {
+        case LIGHT_TYPE_DIRECTIONAL:
+        {
+            GenerateDirectionalLightOcclusionRayWithLightingData(
+			LightingData,
+			WorldPosition, WorldNormal,
+			RandSample,
+			RayOrigin,
+			RayDirection,
+			RayTMin,
+			RayTMax);
+            return true;
+            break;
+        }
+        case LIGHT_TYPE_POINT:
+        {
+            if(LightingData.SourceRadius == 0)
+            {
+                return GeneratePointLightOcclusionRayWithLightingData(
+				LightingData,
+				WorldPosition, WorldNormal,
+				RandSample,
+				RayOrigin,
+				RayDirection,
+				RayTMin,
+				RayTMax);
+            }
+            else
+            {
+                float RayPdf;
+			    return GenerateSphereLightOcclusionRayWithLightingData(
+				    LightingData,
+				    WorldPosition, WorldNormal,
+				    RandSample,
+				    RayOrigin,
+				    RayDirection,
+				    RayTMin,
+				    RayTMax,
+				    RayPdf);
+            }
+            break;
+        }
+        case LIGHT_TYPE_RECT:
+        {
+            float RayPdf = 0.0;
+		    return GenerateRectLightOcclusionRayWithLightingData(
+			    LightingData,
+			    WorldPosition, WorldNormal,
+			    RandSample,
+			    RayOrigin,
+			    RayDirection,
+			    RayTMin,
+			    RayTMax,
+			    RayPdf);
+            break;
+        }
+        case LIGHT_TYPE_SPOT:
+        {
+            return GenerateSpotLightOcclusionRayWithLightingData(
+			LightingData,
+			WorldPosition, WorldNormal,
+			RandSample,
+			RayOrigin,
+			RayDirection,
+			RayTMin,
+			RayTMax);
+            break;
+        }
+         default:
+        {
+            RayOrigin = LightingData.LightPosition;
+            RayTMax = 1e27f;
+            RayTMin = 0.01f;
+            RayDirection = LightingData.Direction;
+            return false;
+        }
+    }
+}

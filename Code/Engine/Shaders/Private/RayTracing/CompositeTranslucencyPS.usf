@@ -1,0 +1,19 @@
+#include "../Common.ush"
+#include "../DeferredShadingCommon.ush"
+
+Texture2D<float4> TranslucencyTexture;
+SamplerState TranslucencyTextureSampler;
+
+Texture2D<float4> CausticsTexture;
+SamplerState CausticsTextureSampler;
+
+// Composite the Caustics Texture with current view in the third pass of LHPC.
+void CompositeTranslucencyPS(
+	in noperspective float2 UV : TEXCOORD0,
+	out float4 OutColor : SV_Target0
+)
+{
+	float4 Translucency = TranslucencyTexture.Sample(TranslucencyTextureSampler, UV);
+	float4 Causitcs = CausticsTexture.Sample(CausticsTextureSampler, UV);
+	OutColor = Translucency + Causitcs;// + Base;
+}
