@@ -93,10 +93,10 @@ P.S. 我们提供了一个已经配置好并且带有多个示例场景的[示�
 [1] @article{XWRZ2021,
     title = {Rendering Transparent Objects with Caustics using Real-Time Ray Tracing},
     journal = {Computers & Graphics},
-    volume = {-},
+    volume = {96},
     pages = {-},
     year = {2021},
-    doi = {-},
+    doi = {10.1016/j.cag.2021.03.003},
     author = {Xin Wang and Risong Zhang}
     }
 ```

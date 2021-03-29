@@ -94,10 +94,10 @@ References
 [1] @article{XWRZ2021,
     title = {Rendering Transparent Objects with Caustics using Real-Time Ray Tracing},
     journal = {Computers & Graphics},
-    volume = {-},
+    volume = {96},
     pages = {-},
     year = {2021},
-    doi = {-},
+    doi = {10.1016/j.cag.2021.03.003},
     author = {Xin Wang and Risong Zhang}
     }
 ```
