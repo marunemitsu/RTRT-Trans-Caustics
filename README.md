@@ -3,7 +3,7 @@ RTRT-Trans&Caustics
 
 [Chinese Version](./ReadmeCHS.md) | [Japanese Version](./ReadmeJP.md)(Comming soon)
 
-![Teaser](./Demo/Figs/GraphicalAbstract.jpg "Graphical Abstract")
+![Teaser](./Demo/Figs/Teaser.png)
 
 This is a reference implementation of `Rendering Transparent Objects with Caustics using Real-Time Ray Tracing` [1] using Unreal Engine 4.25.1.
 It approximates several transparency features, including reflections/refractions, volumetric absorption, rough transparency, and refractive caustics.
