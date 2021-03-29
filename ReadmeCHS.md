@@ -5,11 +5,11 @@ RTRT-Trans&Caustics
 
 ![Teaser](./Demo/Figs/Teaser.png)
 
-本工程是使用虚幻引擎4.25.1对于论文`Rendering Transparent Objects with Caustics using Real-Time Ray Tracing`[1]的实现参考。
+本工程是使用虚幻引擎4.25.1对于论文`Rendering Transparent Objects with Caustics using Real-Time Ray Tracing`<sup>[1]</sup>的实现参考。
 论文中模拟了多种透明材质的光学现象，包括反射/折射、体积吸收、粗糙透明以及折射焦散，并将多种透明现象看为一个整体来处理，而不是独立地作为特效实现。
 渲染结果中会带有些许噪声，我们将在未来工作中解决。
 
-如果想要使用我们的工作，请引用我们的论文[1]。
+如果想要使用我们的工作，请引用我们的论文<sup>[1]</sup>。
 
 [论文链接](https://www.sciencedirect.com/science/article/pii/S009784932100039X "中文版本将在明年在知网可查。")
 
@@ -73,16 +73,16 @@ P.S. 我们提供了一个已经配置好并且带有多个示例场景的[示�
 未来工作
 ---
 * 将工作转移到一个新的着色模式中，并且为蓝图中材质的根节点中的相应参数改名。
-* 拓展LLT，并实现单条光线的多次交互, 类似Barré-Brisebois等人的工作[2]$。
+* 拓展LLT，并实现单条光线的多次交互, 类似Barré-Brisebois等人的工作<sup>[2]</sup>$。
 * 设计一个去噪器以降低反射、粗糙透明以及折射焦散中的噪声。
-* 修改LHPC中Pass的顺序，使得折射焦散在透过透明表面时可见，类似于欧阳和杨的工作[3]。
+* 修改LHPC中Pass的顺序，使得折射焦散在透过透明表面时可见，类似于欧阳和杨的工作<sup>[3]</sup>。
 
 声明
 ---
 
 本工作受到中国自然科学基金[51627805]的支持。
 我们感谢匿名的审稿人以及他们中肯且有帮助的意见。
-我们还要感谢Hyuk Kim对于复现SSPM[4]时提供的帮助。
+我们还要感谢Hyuk Kim对于复现SSPM<sup>[4]</sup>时提供的帮助。
 感谢虚幻引擎的初始内容提供的材质，以及_ArchViz_ Interior工程提供的苹果以及多面体的模型。
 其他场景素材是从<https://aigei.com>（爱给网）购买获得的.
 
