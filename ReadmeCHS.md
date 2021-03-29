@@ -63,7 +63,7 @@ P.S. 我们提供了一个已经配置好并且带有多个示例场景的[示�
 视频结果
 ---
 
-[![Video Results](http://i2.hdslb.com/bfs/archive/da967fd8f8a6f58e99c22a9930c254601986414f.jpg)](https://www.bilibili.com/video/BV1Xy4y147tq "Video Result from Bilibili")
+[![Video Results](http://i0.hdslb.com/bfs/archive/653e387caba85a4ef9b4e88b90c55f137919cc00.jpg)](https://www.bilibili.com/video/BV1Xy4y147tq "Video Result from Bilibili")
 
 许可
 ---
