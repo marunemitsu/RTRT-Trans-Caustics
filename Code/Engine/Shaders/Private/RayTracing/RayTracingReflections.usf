@@ -83,7 +83,7 @@
 // All reflection captures available are always available here even if completely outside the view.
 #define REFLECTION_COMPOSITE_NO_CULLING_DATA
 #include "../ReflectionEnvironmentComposite.ush"
-#include "RTBSDF.ush"
+#include "Utils.ush"
 
 uint SamplesPerPixel;
 uint RefractiveBounces;
