@@ -318,7 +318,7 @@ RAY_TRACING_ENTRY_RAYGEN(RayTracingCausticsRGS)
                     RayCone,
                     true);
                 
-                IncidentRadiance -= 12 * RayAbsorb(AbsorptionPayload.DiffuseColor, AbsorptionPayload.HitT, AbsorptionPayload。Ior);
+                IncidentRadiance -= 12 * RayAbsorb(AbsorptionPayload.DiffuseColor, AbsorptionPayload.HitT, AbsorptionPayload.Ior);
                 bool IsInside = (AbsorptionPayload.IsFrontFace() && AbsorptionPayload.BlendingMode == RAY_TRACING_BLEND_MODE_OPAQUE);
                 RayDesc TransmissionRay;
                 if (IsInside)
