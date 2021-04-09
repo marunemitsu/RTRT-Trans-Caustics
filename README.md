@@ -3,14 +3,15 @@ RTRT-Trans&Caustics
 
 [Chinese Version](./ReadmeCHS.md) | [Japanese Version](./ReadmeJP.md)(Comming soon)
 
-![Teaser](./Demo/Figs/GraphicalAbstract.jpg "Graphical Abstract")
+![Teaser](./Demo/Figs/Teaser.png)
 
-This is a reference implementation of `Rendering Transparent Objects with Caustics using Real-Time Ray Tracing` [1] using Unreal Engine 4.25.1.
+This is a reference implementation of `Rendering transparent objects with caustics using real-time ray tracing`<sup>[1]</sup> using Unreal Engine 4.25.1.
 It approximates several transparency features, including reflections/refractions, volumetric absorption, rough transparency, and refractive caustics.
 The results are relatively noise free and a step up over the prior raster hacks in that the model plays together into a cohesive whole, rather than being individual effects.
-Should you be making use of our work, please cite our paper [1].
+Should you be making use of our work, please cite our paper<sup>[1]</sup>.
 
-[Paper](https://www.sciencedirect.com/science/article/pii/S009784932100039X "The paper is now in press.")
+[Paper](https://www.sciencedirect.com/science/article/pii/S009784932100039X "The paper is now available online.") | 
+[50-day free link](https://authors.elsevier.com/c/1csuo_2EOxPkV7)
 
 Setup
 ---
@@ -41,7 +42,8 @@ Usage
 
 ### Enable our work in UE4
 
-Drag a `Post Process Volume` actor to the scene and change the value `Ray Tracing Translucency` to `Ray Tracing`.
+Drag a `Post Process Volume` actor to the scene and switch the property `Ray Tracing Translucency` to `Ray Tracing`.
+For more details, please check this [toturial](https://docs.unrealengine.com/en-US/RenderingAndGraphics/RayTracing/RayTracingSettings/index.html) from the Unreal Engine Documatation.
 
 ![Setting](./Demo/Figs/Setup.png)
 
@@ -63,7 +65,7 @@ P.S. We provide a [demo project](./Demo/DemoProject) with several sample scenes 
 Video Results
 ---
 
-[![Video Results](http://i2.hdslb.com/bfs/archive/da967fd8f8a6f58e99c22a9930c254601986414f.jpg)](https://www.bilibili.com/video/BV1Xy4y147tq "Video Result from Bilibili")
+[![Video Results](http://i0.hdslb.com/bfs/archive/653e387caba85a4ef9b4e88b90c55f137919cc00.jpg)](https://www.bilibili.com/video/BV1Xy4y147tq "Video Result from Bilibili")
 
 License
 ---
@@ -74,16 +76,16 @@ Should you be interested in using our technology for any commercial use, please 
 TODO
 ---
 * Move to a new shading mode and update the parameters of the root node of the material.
-* Extend LLT to handle stacked transparent objects, like Barré-Brisebois et al.'s work [2].
+* Extend LLT to handle stacked transparent objects, like Barré-Brisebois et al.'s work<sup>[2]</sup>.
 * Design a denoiser that can supress the noise in rough transparncy, reflections, and refractive caustics.
-* Chage the order of the passes in LHPC and make the caustics can be seen through the transparent object, similar to Ouyang and Yang's work [3].
+* Chage the order of the passes in LHPC and make the caustics can be seen through the transparent object, similar to Ouyang and Yang's work<sup>[3]</sup>.
 
 Acknowledgment
 ---
 
 This work was supported by the National Natural Science Foundation of China [51627805].
 The authors would like to thank the anonymous reviewers for both their helpful comments and suggestions.
-The authors also would like to thank Hyuk Kim for his help in implementing the SSPM [4]$.
+The authors also would like to thank Hyuk Kim for his help in implementing the SSPM<sup>[4]</sup>$.
 The authors wish to thank the starter content of UE4 for the materials and the project _ArchViz_ Interior for the model of the apple and polyhedron.
 Other scene elements were purchased from <https://aigei.com>.
 
@@ -92,13 +94,13 @@ References
 
 ```
 [1] @article{XWRZ2021,
-    title = {Rendering Transparent Objects with Caustics using Real-Time Ray Tracing},
+    title = {Rendering transparent objects with caustics using real-time ray tracing},
     journal = {Computers & Graphics},
     volume = {96},
-    pages = {-},
+    pages = {36-47},
     year = {2021},
     doi = {10.1016/j.cag.2021.03.003},
-    author = {Xin Wang and Risong Zhang}
+    author = {Wang, Xin and Zhang, Risong}
     }
 ```
 
@@ -120,7 +122,7 @@ References
 
 ```
 [3] @Misc{RTXGI2020,
-	author = {Yaobin Ouyang and Xueqing Yang},
+	author = {Ouyang, Yaobin and Yang, Xueqing},
 	title = {Generating Ray-Traced Caustic Effects in Unreal Engine 4, Part 1},
 	date = {2020-12-08},
 	url ={https://developer.nvidia.com/blog/generating-ray-traced-caustic-effects-in-unreal-engine-4-part-1/},
