@@ -55,7 +55,7 @@ RTRT-Trans&Caustics
 ![ShadingMode](./Demo/Figs/ShadingMode.png)
 
 我们引入了三个材质参数来控制渲染结果，包括`absorption coefficient`（吸收因子）、`roughness`（粗糙度）以及`opacity`（不透明度）。
-此外，参数`refraction`（折射）控制透明材质的折射率。
+此外，参数`Specular`控制透明材质的折射率。
 这些参数如何影响渲染结果会在论文的补充材料中找到。
 
 ![Parameters](./Demo/Figs/Parameters.png)
