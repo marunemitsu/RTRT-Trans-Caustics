@@ -55,7 +55,7 @@ Furthermore, to enable the roughness, the lighting model must be `Surface Forwar
 ![ShadingMode](./Demo/Figs/ShadingMode.png)
 
 We introduce three material parameters into our work, which are the `absorption coefficient`, `roughness` and the `opacity`.
-Additionally, the parameter `refraction` controls the IOR of the material.
+Additionally, the parameter `Specular` controls the Ior of the material.
 How these parameters affect the results can be found in the supplementary material to the paper.
 
 ![Parameters](./Demo/Figs/Parameters.png)
