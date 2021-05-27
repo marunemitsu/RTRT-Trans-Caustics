@@ -1,7 +1,7 @@
 RTRT-Trans&Caustics
 ===
 
-[英文版本](./README.md)|[日语版本](./ReadmeJP.md)(即将上线)
+[英文版本](./README.md)
 
 ![Teaser](./Demo/Figs/Teaser.png)
 
@@ -11,8 +11,7 @@ RTRT-Trans&Caustics
 
 如果想要使用我们的工作，请引用我们的论文<sup>[1]</sup>。
 
-[论文链接](https://www.sciencedirect.com/science/article/pii/S009784932100039X "中文版本将在知网可查。") | 
-[50天免费链接](https://authors.elsevier.com/c/1csuo_2EOxPkV7)
+[论文链接](https://www.sciencedirect.com/science/article/pii/S009784932100039X "中文版本将在知网可查。")
 
 安装
 ---
