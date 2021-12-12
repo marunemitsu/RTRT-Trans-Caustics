@@ -3,7 +3,7 @@ RTRT-Trans&Caustics
 
 [英文版本](./README.md)
 
-![Teaser](./Demo/Figs/Teaser.png)
+![Teaser](https://user-images.githubusercontent.com/33621926/145716804-0547d3bd-ee8e-4582-82fa-3c08945b044e.png)
 
 本工程是使用虚幻引擎4.25.1对于论文`Rendering Transparent Objects with Caustics using Real-Time Ray Tracing`<sup>[1]</sup>的实现参考。
 论文中模拟了多种透明材质的光学现象，包括反射/折射、体积吸收、粗糙透明以及折射焦散，并将多种透明现象看为一个整体来处理，而不是独立地作为特效实现。
@@ -12,6 +12,8 @@ RTRT-Trans&Caustics
 如果想要使用我们的工作，请引用我们的论文<sup>[1]</sup>。
 
 [论文链接](https://www.sciencedirect.com/science/article/pii/S009784932100039X "中文版本将在知网可查。")
+![GraphicalAbstract](https://user-images.githubusercontent.com/33621926/145716815-19a41803-9135-4204-b75d-699fcecbe0fb.jpg)
+
 
 安装
 ---
@@ -44,20 +46,23 @@ RTRT-Trans&Caustics
 将`Post Process Volume`拖入场景中，并将参数`Ray Tracing Translucency`设置为`Ray Tracing`。
 请访问[这篇教程](https://docs.unrealengine.com/en-US/RenderingAndGraphics/RayTracing/RayTracingSettings/index.html)以查看更多关于在UE4中使用实施光线追踪的设置。
 
-![Setting](./Demo/Figs/Setup.png)
+![Setup](https://user-images.githubusercontent.com/33621926/145716823-ef9a8a2e-2bb4-41a9-8b13-2ba05cee60cd.png)
+
 
 ### 材质参数
 
 每个透明材质的混合模式必须为`Translucent`，同时着色模式必须为`Default Lit`。
 此外，要想使粗糙度可用，光照模型必须被设置为`Surface Forward Shading`。
 
-![ShadingMode](./Demo/Figs/ShadingMode.png)
+![ShadingMode](https://user-images.githubusercontent.com/33621926/145716829-f956c5bb-4563-43cf-af51-e4c364b0d869.png)
+
 
 我们引入了三个材质参数来控制渲染结果，包括`absorption coefficient`（吸收因子）、`roughness`（粗糙度）以及`opacity`（不透明度）。
 此外，参数`Specular`控制透明材质的折射率。
 这些参数如何影响渲染结果会在论文的补充材料中找到。
 
-![Parameters](./Demo/Figs/Parameters.png)
+![Parameters](https://user-images.githubusercontent.com/33621926/145716838-b1334fe6-e5bd-42bf-93cd-d16279a39282.png)
+
 
 P.S. 我们提供了一个已经配置好并且带有多个示例场景的[示例工程](./Demo/Demoproject)
 
