@@ -2,7 +2,8 @@ RTRT-Trans&Caustics
 ===
 
 [Chinese Version](./ReadmeCHS.md)
-![Teaser](./Demo/Figs/Teaser.png)
+![Teaser](https://user-images.githubusercontent.com/33621926/145716692-9f94df7e-a50a-4aec-9d92-c9ea6bb91e4f.png)
+
 
 This is a reference implementation of `Rendering transparent objects with caustics using real-time ray tracing`<sup>[1]</sup> using Unreal Engine 4.25.1.
 It approximates several transparency features, including reflections/refractions, volumetric absorption, rough transparency, and refractive caustics.
@@ -10,6 +11,7 @@ The results are relatively noise free and a step up over the prior raster hacks 
 Should you be making use of our work, please cite our paper<sup>[1]</sup>.
 
 [Paper](https://www.sciencedirect.com/science/article/pii/S009784932100039X "The paper is now available online.") 
+![GraphicalAbstract](https://user-images.githubusercontent.com/33621926/145716753-6962b738-2009-4580-a463-988f0c253228.jpg)
 
 Setup
 ---
@@ -43,20 +45,23 @@ Usage
 Drag a `Post Process Volume` actor to the scene and switch the property `Ray Tracing Translucency` to `Ray Tracing`.
 For more details, please check this [toturial](https://docs.unrealengine.com/en-US/RenderingAndGraphics/RayTracing/RayTracingSettings/index.html) from the Unreal Engine Documatation.
 
-![Setting](./Demo/Figs/Setup.png)
+![Setting](https://user-images.githubusercontent.com/33621926/145716704-48143889-8422-4a44-a19a-8e6922a8b46e.png)
+
 
 ### Material Parameters
 
 The blending mode each transparent material must be `Translucent` and the shading model must be `Default Lit`.
 Furthermore, to enable the roughness, the lighting model must be `Surface Forward Shading`.
 
-![ShadingMode](./Demo/Figs/ShadingMode.png)
+![ShadingMode](https://user-images.githubusercontent.com/33621926/145716725-f9dc648e-4b18-41c6-adc3-cfd030e29949.png)
+
 
 We introduce three material parameters into our work, which are the `absorption coefficient`, `roughness` and the `opacity`.
 Additionally, the parameter `Specular` controls the Ior of the material.
 How these parameters affect the results can be found in the supplementary material to the paper.
 
-![Parameters](./Demo/Figs/Parameters.png)
+![Parameters](https://user-images.githubusercontent.com/33621926/145716738-94bad3cf-0092-4702-98e2-2c8703aec97d.png)
+
 
 P.S. We provide a [demo project](./Demo/DemoProject) with several sample scenes which have been configured.
 
