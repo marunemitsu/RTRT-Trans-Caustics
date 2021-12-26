@@ -76,14 +76,13 @@ License
 The provided implementation is strictly for academic purposes only.
 Should you be interested in using our technology for any commercial use, please feel free to contact us.
 
-TODO
+Future Works
 ---
 * Move to a new shading mode and update the parameters of the root node of the material.
 * Extend LLT to handle stacked transparent objects, like Barré-Brisebois et al.'s work<sup>[2]</sup>.
-* Appling TAA.
+* Applying TAA to denoise and improve the performance.
 * Design a denoiser that can supress the noise in rough transparncy, reflections, and refractive caustics.
-* Chage the order of the passes in LHPC and make the caustics can be seen through the transparent object, similar to Ouyang and Yang's work<sup>[3]</sup>.
-* Move forward into Unreal Engine 5.
+* Making the caustics can be seen through the transparent object, similar to Ouyang and Yang's work<sup>[3]</sup>.
 
 Acknowledgment
 ---
